@@ -1,0 +1,6 @@
+@echo off
+echo Running scripts...
+outputVersion.py
+echo Building Execute file...
+pyinstaller -F -i icon.ico BackupData.py
+pause
