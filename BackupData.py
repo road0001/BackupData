@@ -14,6 +14,13 @@ VERSION={
 "versionUpdate":[
 {
 	"mainVersion":"1.0",
+	"dateVersion":"20240709",
+	"versionDesc":[
+		"完成读取配置文件功能。",
+	""]
+},
+{
+	"mainVersion":"1.0",
 	"dateVersion":"20240708",
 	"versionDesc":[
 		"初始版本。",
@@ -84,7 +91,7 @@ def loadConfig(file):
 	global configData
 	fileData=loadFile(file)
 	try:
-		configData=json.dumps(fileData)
+		configData=json.loads(fileData)
 		return True
 	except Exception as e:
 		return False
@@ -105,6 +112,12 @@ def main(args):
 			cfgLoadSuccess=loadConfig(defaultConfig)
 		elif len(args)==2: # 传参配置文件
 			cfgLoadSuccess=loadConfig(args[1])
+		else:
+			out.outlnC('未找到配置文件！按任意键重试！','red','black',1)
+			pause()
+			main([args[0]]) # 传参配置文件读取失败时，尝试读取默认配置文件
+		if cfgLoadSuccess:
+			print(configData)
 		else:
 			out.outlnC('配置文件读取失败！按任意键重试！','red','black',1)
 			pause()
