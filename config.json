@@ -1,0 +1,26 @@
+{
+	"backupPath":"E:\\BackupData",
+	"backupList":[
+		{
+			"name":"Maxthon",
+			"path":["C:\\Users\\jinyu\\AppData\\Local\\Maxthon"],
+			"process":["Maxthon.exe"],
+			"enabled":false
+		},
+		{
+			"name":"Catsxp",
+			"path":["C:\\Users\\jinyu\\AppData\\Local\\CatsxpSoftware"],
+			"process":["Catsxp.exe"],
+			"enabled":true
+		},
+		{
+			"name":"QQ",
+			"path":[
+				"D:\\User\\JMRY\\Documents\\Tencent Files\\376509849\\CustomFace.db",
+				"D:\\User\\JMRY\\Documents\\Tencent Files\\376509849\\FaceStore.db"
+			],
+			"process":[],
+			"enabled":true
+		}
+	]
+}
