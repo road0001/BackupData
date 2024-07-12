@@ -14,6 +14,14 @@ VERSION={
 "appNameCN":"数据备份工具",
 "versionUpdate":[
 {
+	"mainVersion":"1.0.1",
+	"dateVersion":"20240712",
+	"versionDesc":[
+		"加入\\*通配符匹配多文件功能。",
+		"修复无法识别配置中的中文路径的bug。",
+	""]
+},
+{
 	"mainVersion":"1.0",
 	"dateVersion":"20240710",
 	"versionDesc":[
@@ -75,18 +83,18 @@ def cwd():
 def exist(dirs):
 	return os.path.exists(dirs)
 
-def loadFile(file,tp='r'):
+def loadFile(file,tp='r',encoding='utf-8'):
 	try:
-		f=open(file,tp)
+		f=open(file,tp,encoding=encoding)
 		fs=f.read()
 		f.close()
 		return fs
 	except:
 		return None
 
-def writeFile(file,data,tp='w'):
+def writeFile(file,data,tp='w',encoding='utf-8'):
 	try:
-		f=open(file,tp)
+		f=open(file,tp,encoding=encoding)
 		f.write(data)
 		f.close()
 		return True
@@ -107,6 +115,21 @@ def getCWDPath():
 		'dirname':os.path.dirname(os.path.realpath(argv[0])),
 		'realDirname':os.path.dirname(os.path.realpath(sys.executable)),
 	}
+
+def getFileList(addr):
+	fileList=[]
+	if not exist(addr):
+		pass
+	elif not os.path.isdir(addr):
+		fileList.append(addr) 
+	else:
+		fileNames=os.listdir(addr)
+		for file in fileNames:
+			curPath=os.path.join(addr,file)
+			if not os.path.isdir(curPath):
+				fileList.append(curPath)
+	return fileList
+
 
 def getAllFileList(addr,includeFolders=False):
 	allFileList={'files':[],'folders':[]}
@@ -152,6 +175,7 @@ def printTitle():
 	os.system('cls')
 	os.system(f'title {VERSION["appNameCN"]} {version}')
 	out.outlnC(f'-=<欢迎使用{VERSION["appNameCN"]}！>=-','purple','black',1)
+	out.outlnC(f'{version}','purple','black',1)
 	out.outln('')
 	return version
 
@@ -205,14 +229,27 @@ def initBackup():
 		out.outlnC(f' > 正在备份：{bk["name"]}','yellow','black',1)
 		backupPath=makeOutputDir(f'{backupRoot}\\{bk["name"]}')
 		for p in bk['path']:
-			out.outC(f'   > {p}','white','black',1)
 			pName=p.split('\\')[-1]
 			try:
 				if os.path.isdir(p):
+					out.outC(f'   > {p}','white','black',1)
 					shutil.copytree(p,backupPath+"\\"+pName)
+					out.outlnC(' [成功]','green','black',1)
 				else:
-					shutil.copy2(p,backupPath+"\\"+pName)
-				out.outlnC(' [成功]','green','black',1)
+					if '*' in p:
+						psp=p.split('\\')
+						pnamesp=psp[-1].split('.')
+						psp.pop()
+						# 处理*通配符的情况
+						fileList=[fl for fl in getFileList('\\'.join(psp)) if len(pnamesp)==1 or f'.{pnamesp[1]}' in fl]
+						for f in fileList:
+							out.outC(f'   > {f}','white','black',1)
+							shutil.copy2(f,backupPath)
+							out.outlnC(' [成功]','green','black',1)
+					else:
+						out.outC(f'   > {p}','white','black',1)
+						shutil.copy2(p,backupPath+"\\"+pName)
+						out.outlnC(' [成功]','green','black',1)
 			except Exception as e:
 				out.outlnC(' [失败]','red','black',1)
 				logger.exception('Exception')
