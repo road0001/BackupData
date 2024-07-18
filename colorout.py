@@ -50,11 +50,11 @@ try:
 except:
 	std_out_handle = 0
 
-def out(o):
+def out(o=''):
 	# print(o),
 	sys.stdout.write(o)
 	sys.stdout.flush()
-def outln(o):
+def outln(o=''):
 	print(o)
 
 colorListF={'black':30,'red':31,'green':32,'yellow':33,'blue':34,'purple':35,'cyan':36,'white':37}

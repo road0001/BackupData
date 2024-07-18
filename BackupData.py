@@ -14,6 +14,15 @@ VERSION={
 "appNameCN":"数据备份工具",
 "versionUpdate":[
 {
+	"mainVersion":"1.0.2",
+	"dateVersion":"20240718",
+	"versionDesc":[
+		"加入日志功能。",
+		"加入统计执行时间功能。",
+		"加入计算文件大小功能。",
+	""]
+},
+{
 	"mainVersion":"1.0.1",
 	"dateVersion":"20240712",
 	"versionDesc":[
@@ -49,7 +58,7 @@ VERSION={
 Configs
 '''
 defaultConfig='config.json'
-
+backupLog='backup.log'
 '''
 Utils
 '''
@@ -148,6 +157,40 @@ def getAllFileList(addr,includeFolders=False):
 	else:
 		return allFileList['files']
 
+def getAllFileSize(fileList):
+	fileSize=0
+	for file in fileList:
+		fileSize+=os.path.getsize(file)
+	return fileSize
+
+def formatFileSize(b):
+	units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+	size = b
+	unitIndex = 0
+	while size >= 1024 and unitIndex < len(units) - 1:
+		size /= 1024
+		unitIndex+=1
+	
+	# 保留两位小数，四舍五入
+	size = round(size * 100) / 100
+	return f'{size} {units[unitIndex]}'
+
+def formatSeconds(s):
+	timeObj=time.gmtime(s)
+	timeStr=''
+	if s<60:
+		timeStr=f'{round(s,2)}秒'
+	else:
+		if timeObj.tm_yday-1>0:
+			timeStr+=f'{timeObj.tm_yday-1}天'
+		if timeObj.tm_hour>0:
+			timeStr+=f'{timeObj.tm_hour}小时'
+		if timeObj.tm_min>0:
+			timeStr+=f'{timeObj.tm_min}分'
+		if timeObj.tm_sec>=0:
+			timeStr+=f'{timeObj.tm_sec}秒'
+	return timeStr
+
 def getProcess():
 	processList=[]
 	for process in psutil.process_iter(['name']):
@@ -170,6 +213,17 @@ def loadConfig(file):
 	except Exception as e:
 		return False
 
+def outLog(log='',tp='log'):
+	logPath=f'{backupRoot}\\{backupLog}'
+	if log=='':
+		logStr='\n'
+	else:
+		curTime=time.strftime('%Y-%m-%d %H:%M:%S')
+		logStr=f'[{curTime}] {tp.upper()}: {log}\n'
+	f=open(logPath,'a',encoding='utf-8')
+	f.write(logStr)
+	f.close()
+
 def printTitle():
 	version=f'v{VERSION["versionUpdate"][0]["mainVersion"]} Build {VERSION["versionUpdate"][0]["dateVersion"]}'
 	os.system('cls')
@@ -190,7 +244,9 @@ def checkProcessList(bkList):
 				checkedList.append(ps)
 	return checkedList
 
+backupRoot=''
 def initBackup():
+	global backupRoot
 	out.outlnC('即将进行备份的内容：','cyan','black',1)
 	bkList=configData['backupList']
 	for bk in bkList:
@@ -211,11 +267,12 @@ def initBackup():
 		else:
 			break
 	
-	curTime=time.strftime('%Y%m%d_%H%M%S')
 	while True:
-		backupRoot=makeOutputDir(f'{configData["backupPath"]}\\{curTime}')
+		backupTime=time.strftime('%Y%m%d_%H%M%S')
+		backupRoot=makeOutputDir(f'{configData["backupPath"]}\\{backupTime}')
 		if exist(backupRoot):
 			out.outlnC(f'\n备份路径：{backupRoot}','purple','black',1)
+			outLog(f'Create backup root: {backupRoot} Success','CREATE_BACKUP')
 			break
 		else:
 			out.outlnC(f'\n备份路径：{backupRoot}创建失败！按任意键重试！','red','black',1)
@@ -223,42 +280,73 @@ def initBackup():
 	
 	out.outlnC('正在备份数据，请稍候……','cyan','black',1)
 	isBackupSuccess=True
+	allBeginTime=time.time()
 	for bk in bkList:
 		if not bk['enabled']:
 			continue
+		bkBeginTime=time.time()
 		out.outlnC(f' > 正在备份：{bk["name"]}','yellow','black',1)
+		outLog(f'Begin backup: {bk["name"]}','BEGIN_BACKUP')
 		backupPath=makeOutputDir(f'{backupRoot}\\{bk["name"]}')
 		for p in bk['path']:
 			pName=p.split('\\')[-1]
 			try:
 				if os.path.isdir(p):
-					out.outC(f'   > {p}','white','black',1)
+					# 备份路径为文件夹
+					beginTime=time.time()
+					sizef=formatFileSize(getAllFileSize(getAllFileList(p)))
+					out.outC(f'   > {p} {sizef}','white','black',1)
 					shutil.copytree(p,backupPath+"\\"+pName)
-					out.outlnC(' [成功]','green','black',1)
+					endTime=time.time()
+					usedTime=formatSeconds(endTime - beginTime)
+					out.outlnC(f' [成功，用时{usedTime}]','green','black',1)
+					outLog(f'{p} {sizef} UsedTime: {usedTime}','COPY_FOLDER')
 				else:
+					# 备份路径为文件
 					if '*' in p:
+						# 处理*通配符的情况
 						psp=p.split('\\')
 						pnamesp=psp[-1].split('.')
 						psp.pop()
-						# 处理*通配符的情况
 						fileList=[fl for fl in getFileList('\\'.join(psp)) if len(pnamesp)==1 or f'.{pnamesp[1]}' in fl]
 						for f in fileList:
-							out.outC(f'   > {f}','white','black',1)
+							beginTime=time.time()
+							sizef=formatFileSize(os.path.getsize(f))
+							out.outC(f'   > {f} {sizef}','white','black',1)
 							shutil.copy2(f,backupPath)
-							out.outlnC(' [成功]','green','black',1)
+							endTime=time.time()
+							usedTime=formatSeconds(endTime - beginTime)
+							out.outlnC(f' [成功，用时{usedTime}]','green','black',1)
+							outLog(f'{f} {sizef} UsedTime: {usedTime}','COPY_FILE')
 					else:
-						out.outC(f'   > {p}','white','black',1)
+						beginTime=time.time()
+						sizef=formatFileSize(os.path.getsize(p))
+						out.outC(f'   > {p} {sizef}','white','black',1)
 						shutil.copy2(p,backupPath+"\\"+pName)
-						out.outlnC(' [成功]','green','black',1)
+						endTime=time.time()
+						usedTime=formatSeconds(endTime - beginTime)
+						out.outlnC(f' [成功，用时{usedTime}]','green','black',1)
+						outLog(f'{p} {sizef} UsedTime: {usedTime}','COPY_FILE')
 			except Exception as e:
 				out.outlnC(' [失败]','red','black',1)
+				outLog(f'{p} Error: {e}','COPY_FILE')
 				logger.exception('Exception')
 				isBackupSuccess=False
+		bkEndTime=time.time()
+		bkUsedTime=formatSeconds(bkEndTime - bkBeginTime)
+		out.outlnC(f' > 备份完成：{bk["name"]}，用时{bkUsedTime}','green','black',1)
+		out.outln()
+		outLog(f'Finish backup: {bk["name"]} UsedTime: {bkUsedTime}','FINISH_BACKUP')
+		outLog()
 	
+	allEndTime=time.time()
+	allUsedTime=formatSeconds(allEndTime - allBeginTime)
 	if isBackupSuccess:
-		out.outlnC(f'所有数据备份成功！按任意键退出。','green','black',1)
+		out.outlnC(f'所有数据备份成功！用时{allUsedTime}，按任意键退出。','green','black',1)
+		outLog(f'All data backup success. UsedTime: {allUsedTime}','BACKUP_RESULT')
 	else:
-		out.outlnC(f'部分数据备份失败！按任意键退出。','red','black',1)
+		out.outlnC(f'部分数据备份失败！用时{allUsedTime}，按任意键退出。','red','black',1)
+		outLog(f'Some data backup failed. UsedTime: {allUsedTime}','BACKUP_RESULT')
 	pause()
 
 
