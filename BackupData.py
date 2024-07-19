@@ -14,6 +14,13 @@ VERSION={
 "appNameCN":"数据备份工具",
 "versionUpdate":[
 {
+	"mainVersion":"1.0.3",
+	"dateVersion":"20240719",
+	"versionDesc":[
+		"优化\\*通配符文件遇到错误时的处理方式。",
+	""]
+},
+{
 	"mainVersion":"1.0.2",
 	"dateVersion":"20240718",
 	"versionDesc":[
@@ -310,14 +317,20 @@ def initBackup():
 						psp.pop()
 						fileList=[fl for fl in getFileList('\\'.join(psp)) if len(pnamesp)==1 or f'.{pnamesp[1]}' in fl]
 						for f in fileList:
-							beginTime=time.time()
-							sizef=formatFileSize(os.path.getsize(f))
-							out.outC(f'   > {f} {sizef}','white','black',1)
-							shutil.copy2(f,backupPath)
-							endTime=time.time()
-							usedTime=formatSeconds(endTime - beginTime)
-							out.outlnC(f' [成功，用时{usedTime}]','green','black',1)
-							outLog(f'{f} {sizef} UsedTime: {usedTime}','COPY_FILE')
+							try:
+								beginTime=time.time()
+								sizef=formatFileSize(os.path.getsize(f))
+								out.outC(f'   > {f} {sizef}','white','black',1)
+								shutil.copy2(f,backupPath)
+								endTime=time.time()
+								usedTime=formatSeconds(endTime - beginTime)
+								out.outlnC(f' [成功，用时{usedTime}]','green','black',1)
+								outLog(f'{f} {sizef} UsedTime: {usedTime}','COPY_FILE')
+							except Exception as e:
+								out.outlnC(' [失败]','red','black',1)
+								outLog(f'{f} Error: {e}','COPY_FILE')
+								logger.exception('Exception')
+								isBackupSuccess=False
 					else:
 						beginTime=time.time()
 						sizef=formatFileSize(os.path.getsize(p))
