@@ -54,8 +54,12 @@ def out(o=''):
 	# print(o),
 	sys.stdout.write(o)
 	sys.stdout.flush()
+	return o
 def outln(o=''):
-	print(o)
+	#print(o)
+	sys.stdout.write(f'{o}\n')
+	sys.stdout.flush()
+	return f'{o}\n'
 
 colorListF={'black':30,'red':31,'green':32,'yellow':33,'blue':34,'purple':35,'cyan':36,'white':37}
 colorListFW={\
@@ -75,12 +79,15 @@ def outC(o,fc,bc,B):
 	else:
 		oc='\033[%s;%s;%sm%s\033[0m' %(B,colorListF[fc],colorListB[bc],o)
 		out(oc)
+	return o
+
 def outlnC(o,fc,bc,B):
 	if isWindows():
 		windows_colorText(o,True,fc,bc,B,B)
 	else:
 		oc='\033[%s;%s;%sm%s\033[0m' %(B,colorListF[fc],colorListB[bc],o)
 		outln(oc)
+	return f'{o}\n'
 
 def colorText(o,colf,colb,BF,BB):
 	fd=''

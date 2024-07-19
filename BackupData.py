@@ -14,6 +14,14 @@ VERSION={
 "appNameCN":"数据备份工具",
 "versionUpdate":[
 {
+	"mainVersion":"1.0.4",
+	"dateVersion":"20240720",
+	"versionDesc":[
+		"加入多文件进度显示功能。",
+		"优化条目显示方式。",
+	""]
+},
+{
 	"mainVersion":"1.0.3",
 	"dateVersion":"20240719",
 	"versionDesc":[
@@ -231,6 +239,11 @@ def outLog(log='',tp='log'):
 	f.write(logStr)
 	f.close()
 
+def progress(cur, total):
+	curStr=f'{cur}'
+	totalStr=f'{total}'
+	return f'{curStr.rjust(len(totalStr))}/{total}'
+
 def printTitle():
 	version=f'v{VERSION["versionUpdate"][0]["mainVersion"]} Build {VERSION["versionUpdate"][0]["dateVersion"]}'
 	os.system('cls')
@@ -280,34 +293,38 @@ def initBackup():
 		if exist(backupRoot):
 			out.outlnC(f'\n备份路径：{backupRoot}','purple','black',1)
 			outLog(f'Create backup root: {backupRoot} Success','CREATE_BACKUP')
+			outLog()
 			break
 		else:
 			out.outlnC(f'\n备份路径：{backupRoot}创建失败！按任意键重试！','red','black',1)
 			pause()
-	
+	out.outln()
 	out.outlnC('正在备份数据，请稍候……','cyan','black',1)
 	isBackupSuccess=True
 	allBeginTime=time.time()
-	for bk in bkList:
+	for bi,bk in enumerate(bkList):
 		if not bk['enabled']:
 			continue
 		bkBeginTime=time.time()
-		out.outlnC(f' > 正在备份：{bk["name"]}','yellow','black',1)
-		outLog(f'Begin backup: {bk["name"]}','BEGIN_BACKUP')
+		out.outlnC(f' > [{progress(bi+1, len(bkList))}] 正在备份：{bk["name"]}','yellow','black',1)
+		outLog(f'Begin backup: [{progress(bi+1, len(bkList))}] {bk["name"]}','BEGIN_BACKUP')
 		backupPath=makeOutputDir(f'{backupRoot}\\{bk["name"]}')
-		for p in bk['path']:
+		for index, p in enumerate(bk['path']):
 			pName=p.split('\\')[-1]
 			try:
 				if os.path.isdir(p):
 					# 备份路径为文件夹
 					beginTime=time.time()
-					sizef=formatFileSize(getAllFileSize(getAllFileList(p)))
-					out.outC(f'   > {p} {sizef}','white','black',1)
+					out.outC(f'   > [{progress(index+1, len(bk["path"]))}] {p} ','white','black',1)
+					allFileList=getAllFileList(p)
+					out.outC(f'{len(allFileList)}个文件 ','white','black',1)
+					sizef=formatFileSize(getAllFileSize(allFileList))
+					out.outC(f'{sizef} ','yellow','black',1)
 					shutil.copytree(p,backupPath+"\\"+pName)
 					endTime=time.time()
 					usedTime=formatSeconds(endTime - beginTime)
-					out.outlnC(f' [成功，用时{usedTime}]','green','black',1)
-					outLog(f'{p} {sizef} UsedTime: {usedTime}','COPY_FOLDER')
+					out.outlnC(f'[成功，用时{usedTime}]','green','black',1)
+					outLog(f'[{progress(index+1, len(bk["path"]))}] {p} {sizef} UsedTime: {usedTime}','COPY_FOLDER')
 				else:
 					# 备份路径为文件
 					if '*' in p:
@@ -316,40 +333,42 @@ def initBackup():
 						pnamesp=psp[-1].split('.')
 						psp.pop()
 						fileList=[fl for fl in getFileList('\\'.join(psp)) if len(pnamesp)==1 or f'.{pnamesp[1]}' in fl]
-						for f in fileList:
+						for i,f in enumerate(fileList):
 							try:
 								beginTime=time.time()
+								out.outC(f'   > [{progress(i+1, len(fileList))}] {f} ','white','black',1)
 								sizef=formatFileSize(os.path.getsize(f))
-								out.outC(f'   > {f} {sizef}','white','black',1)
+								out.outC(f'{sizef} ','yellow','black',1)
 								shutil.copy2(f,backupPath)
 								endTime=time.time()
 								usedTime=formatSeconds(endTime - beginTime)
-								out.outlnC(f' [成功，用时{usedTime}]','green','black',1)
-								outLog(f'{f} {sizef} UsedTime: {usedTime}','COPY_FILE')
+								out.outlnC(f'[成功，用时{usedTime}]','green','black',1)
+								outLog(f'[{progress(i+1, len(fileList))}] {f} {sizef} UsedTime: {usedTime}','COPY_FILE')
 							except Exception as e:
 								out.outlnC(' [失败]','red','black',1)
-								outLog(f'{f} Error: {e}','COPY_FILE')
+								outLog(f'[{progress(i+1, len(fileList))}] {f} Error: {e}','COPY_FILE')
 								logger.exception('Exception')
 								isBackupSuccess=False
 					else:
 						beginTime=time.time()
+						out.outC(f'   > [{progress(index+1, len(bk["path"]))}] {p} ','white','black',1)
 						sizef=formatFileSize(os.path.getsize(p))
-						out.outC(f'   > {p} {sizef}','white','black',1)
+						out.outC(f'{sizef} ','yellow','black',1)
 						shutil.copy2(p,backupPath+"\\"+pName)
 						endTime=time.time()
 						usedTime=formatSeconds(endTime - beginTime)
-						out.outlnC(f' [成功，用时{usedTime}]','green','black',1)
-						outLog(f'{p} {sizef} UsedTime: {usedTime}','COPY_FILE')
+						out.outlnC(f'[成功，用时{usedTime}]','green','black',1)
+						outLog(f'[{progress(index+1, len(bk["path"]))}] {p} {sizef} UsedTime: {usedTime}','COPY_FILE')
 			except Exception as e:
 				out.outlnC(' [失败]','red','black',1)
-				outLog(f'{p} Error: {e}','COPY_FILE')
+				outLog(f'[{progress(index+1, len(bk["path"]))}] {p} Error: {e}','COPY_FILE')
 				logger.exception('Exception')
 				isBackupSuccess=False
 		bkEndTime=time.time()
 		bkUsedTime=formatSeconds(bkEndTime - bkBeginTime)
-		out.outlnC(f' > 备份完成：{bk["name"]}，用时{bkUsedTime}','green','black',1)
+		out.outlnC(f' > 备份完成：[{progress(bi+1, len(bkList))}] {bk["name"]}，用时{bkUsedTime}','green','black',1)
 		out.outln()
-		outLog(f'Finish backup: {bk["name"]} UsedTime: {bkUsedTime}','FINISH_BACKUP')
+		outLog(f'Finish backup: [{progress(bi+1, len(bkList))}] {bk["name"]} UsedTime: {bkUsedTime}','FINISH_BACKUP')
 		outLog()
 	
 	allEndTime=time.time()
