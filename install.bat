@@ -4,4 +4,5 @@ pip install loguru
 pip install send2trash
 pip install pyinstaller
 pip install psutil
+pip install tqdm
 pause

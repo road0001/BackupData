@@ -14,6 +14,13 @@ VERSION={
 "appNameCN":"数据备份工具",
 "versionUpdate":[
 {
+	"mainVersion":"1.0.6",
+	"dateVersion":"20240725",
+	"versionDesc":[
+		"调整部分文字显示效果。",
+	""]
+},
+{
 	"mainVersion":"1.0.5",
 	"dateVersion":"20240725",
 	"versionDesc":[
@@ -247,10 +254,20 @@ def outLog(log='',tp='log'):
 	f.write(logStr)
 	f.close()
 
-def progress(cur, total):
+def progress(cur, total, type='progress'):
 	curStr=f'{cur}'
 	totalStr=f'{total}'
-	return f'{curStr.rjust(len(totalStr))}/{total}'
+	if type=='progress':
+		return f'{curStr.rjust(len(totalStr))}/{total}'
+	elif type=='percent':
+		curStr+='%'
+		totalStr+='%'
+		bb='\b'*len(totalStr)
+		return f'{curStr.rjust(len(totalStr))}{bb}'
+	elif type=='number':
+		return f'{curStr.rjust(len(totalStr))}'
+	else:
+		return curStr
 
 def printTitle():
 	version=f'v{VERSION["versionUpdate"][0]["mainVersion"]} Build {VERSION["versionUpdate"][0]["dateVersion"]}'
@@ -282,7 +299,7 @@ def initBackup():
 	for i,bk in enumerate(bkList):
 		if not bk['enabled']:
 			continue
-		out.outlnC(f' {i+1}. {bk["name"]}','yellow','black',1)
+		out.outlnC(f' {progress(i+1, len(bkList), "number")}. {bk["name"]}','yellow','black',1)
 	out.outC('按数字键选择要备份的数据，按回车键开始备份所有数据：','cyan','black',1)
 	selectBackup=input()
 	if selectBackup.isdigit():
