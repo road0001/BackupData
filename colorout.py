@@ -2,6 +2,7 @@ import os
 import sys
 import ctypes
 import platform
+from colorama import Fore, Back, Style, init
 
 STD_INPUT_HANDLE = -10
 STD_OUTPUT_HANDLE = -11
@@ -73,21 +74,80 @@ colorListBW={\
 	'dark_black':BACKGROUND_BLACK,'dark_red':BACKGROUND_DARKRED,'dark_green':BACKGROUND_DARKGREEN,'dark_yellow':BACKGROUND_DARKYELLOW,'dark_blue':BACKGROUND_BLUE,'dark_purple':BACKGROUND_DARKPINK,'dark_cyan':BACKGROUND_DARKSKYBLUE,'dark_white':BACKGROUND_DARKWHITE,'dark_gray':BACKGROUND_DARKGRAY\
 }
 
-def outC(o,fc,bc,B):
-	if isWindows():
-		windows_colorText(o,False,fc,bc,B,B)
-	else:
-		oc='\033[%s;%s;%sm%s\033[0m' %(B,colorListF[fc],colorListB[bc],o)
-		out(oc)
-	return o
+def getColor(fc,bc,s):
+	fcMap={
+		'black':Fore.BLACK,
+		'red':Fore.LIGHTRED_EX,
+		'green':Fore.LIGHTGREEN_EX,
+		'yellow':Fore.LIGHTYELLOW_EX,
+		'blue':Fore.LIGHTBLUE_EX,
+		'purple':Fore.LIGHTMAGENTA_EX,
+		'cyan':Fore.LIGHTCYAN_EX,
+		'white':Fore.LIGHTWHITE_EX,
 
-def outlnC(o,fc,bc,B):
-	if isWindows():
-		windows_colorText(o,True,fc,bc,B,B)
-	else:
-		oc='\033[%s;%s;%sm%s\033[0m' %(B,colorListF[fc],colorListB[bc],o)
-		outln(oc)
-	return f'{o}\n'
+		'dark_black':Fore.BLACK,
+		'dark_red':Fore.RED,
+		'dark_green':Fore.GREEN,
+		'dark_yellow':Fore.YELLOW,
+		'dark_blue':Fore.BLUE,
+		'dark_purple':Fore.MAGENTA,
+		'dark_cyan':Fore.CYAN,
+		'dark_white':Fore.WHITE,
+	}
+	bkMap={
+		'black':Back.BLACK,
+		'red':Back.LIGHTRED_EX,
+		'green':Back.LIGHTGREEN_EX,
+		'yellow':Back.LIGHTYELLOW_EX,
+		'blue':Back.LIGHTBLUE_EX,
+		'purple':Back.LIGHTMAGENTA_EX,
+		'cyan':Back.LIGHTCYAN_EX,
+		'white':Back.LIGHTWHITE_EX,
+
+		'dark_black':Back.BLACK,
+		'dark_red':Back.RED,
+		'dark_green':Back.GREEN,
+		'dark_yellow':Back.YELLOW,
+		'dark_blue':Back.BLUE,
+		'dark_purple':Back.MAGENTA,
+		'dark_cyan':Back.CYAN,
+		'dark_white':Back.WHITE,
+	}
+	sMap={
+		1:Style.NORMAL,
+		2:Style.BRIGHT,
+		3:Style.DIM,
+	}
+	return {
+		'fc':fcMap[fc],
+		'bk':bkMap[bc],
+		's':sMap[s],
+	}
+
+def outC(t,fc,bc,s):
+	color=getColor(fc,bc,s)
+	sys.stdout.write(f'{color["s"]}{color["fc"]}{color["bk"]}{t}{Back.RESET}{Fore.RESET}{Style.RESET_ALL}')
+	sys.stdout.flush()
+	return t
+
+def outlnC(t,fc=Fore.RESET,bc=Back.RESET,s=Style.BRIGHT):
+	return outC(f'{t}\n',fc,bc,s)
+
+# def outC(o,fc,bc,B):
+# 	if isWindows():
+# 		windows_colorText(o,False,fc,bc,B,B)
+# 	else:
+# 		oc='\033[%s;%s;%sm%s\033[0m' %(B,colorListF[fc],colorListB[bc],o)
+# 		out(oc)
+# 	return o
+
+# def outlnC(o,fc,bc,B):
+# 	if isWindows():
+# 		windows_colorText(o,True,fc,bc,B,B)
+# 	else:
+# 		oc='\033[%s;%s;%sm%s\033[0m' %(B,colorListF[fc],colorListB[bc],o)
+# 		outln(oc)
+# 	return f'{o}\n'
 
 def colorText(o,colf,colb,BF,BB):
 	fd=''

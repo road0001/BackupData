@@ -1,23 +1,42 @@
 {
-	"backupPath":"E:\\BackupData",
+	"backupPath":"E:\\git\\BackupData\\dist\\Test",
 	"backupList":[
 		{
-			"name":"Maxthon",
-			"path":["C:\\Users\\jinyu\\AppData\\Local\\Maxthon"],
-			"process":["Maxthon.exe"],
-			"enabled":false
-		},
-		{
-			"name":"Catsxp",
-			"path":["C:\\Users\\jinyu\\AppData\\Local\\CatsxpSoftware"],
-			"process":["Catsxp.exe"],
+			"name":"QQ1_Folder",
+			"path":[
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\ExpressionRecommend"
+			],
+			"process":[],
 			"enabled":true
 		},
 		{
-			"name":"QQ",
+			"name":"QQ2_AllFiles",
 			"path":[
-				"D:\\User\\JMRY\\Documents\\Tencent Files\\376509849\\CustomFace.db",
-				"D:\\User\\JMRY\\Documents\\Tencent Files\\376509849\\FaceStore.db"
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\Ads\\*"
+			],
+			"process":[],
+			"enabled":true
+		},
+		{
+			"name":"QQ3_MultiFiles",
+			"path":[
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\SmallEmoji.db",
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\RSFileClt.db",
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\CustomFace.db",
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\FaceStore.db"
+			],
+			"process":[],
+			"enabled":true
+		},
+		{
+			"name":"QQ4_MixedFiles",
+			"path":[
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\ExpressionRecommend",
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\Ads\\*",
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\SmallEmoji.db",
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\RSFileClt.db",
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\CustomFace.db",
+				"E:\\用户\\JMRY\\Documents\\Tencent Files\\376509849\\FaceStore.db"
 			],
 			"process":[],
 			"enabled":true

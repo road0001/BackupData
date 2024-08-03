@@ -4,15 +4,29 @@ import json
 import time
 import psutil
 import shutil
+import threading
 import subprocess
 import send2trash
 from loguru import logger
 import colorout as out
 
+'''
+TODO
+将文件夹刷屏改为显示全体进度和单文件百分比
+'''
+
 VERSION={
 "appName":"BackupData",
 "appNameCN":"数据备份工具",
 "versionUpdate":[
+{
+	"mainVersion":"1.0.7",
+	"dateVersion":"20240804",
+	"versionDesc":[
+		"加入文件复制进度显示。",
+		"优化复制文件夹的算法。",
+	""]
+},
 {
 	"mainVersion":"1.0.6",
 	"dateVersion":"20240725",
@@ -269,6 +283,139 @@ def progress(cur, total, type='progress'):
 	else:
 		return curStr
 
+
+def copyProcess(src, dst):
+	srcSize=0
+	dstSize=0
+	count=0
+	maxCount=300
+	lastDstSize=0
+	sizeLimit=104857600
+	if os.path.isdir(dst):
+		dst = os.path.join(dst, os.path.basename(src))
+	while True:
+		try:
+			if os.path.exists(src):
+				srcSize=os.path.getsize(src)
+				if srcSize<=sizeLimit:
+					return
+			if os.path.exists(dst):
+				dstSize=os.path.getsize(dst)
+			if dstSize >= srcSize or srcSize<=0:
+				dstSize = srcSize
+				# c.outlnC(f'[完成]','green','black',1)
+				return
+			else:
+				percent=int(dstSize / srcSize  * 100)
+				out.outC(progress(percent, 99, 'percent'),'yellow','black',1)
+			if dstSize != lastDstSize:
+				lastDstSize=dstSize
+				count=0
+			else:
+				count+=1
+			if count >= maxCount:
+				return
+			time.sleep(0.1)
+		except Exception as e:
+			return
+
+
+def copyWithInfo(f, backupPath, i, fileList, isFolder=False):
+	try:
+		beginTime=time.time()
+		if isFolder:
+			spaces='     '
+			#end='     > [    236/1126185] 111205.3 MB [成功，用时{usedTime}]{end}'
+			end =f'{" "*70}\r'
+			backupp=backupPath
+			print(end, end='', flush=True)
+			# fileName=f.split('\\')[-1]
+			out.outC(f'{spaces}> [{progress(i+1, len(fileList))}] ','white','black',1)
+		else:
+			spaces='   '
+			end='\n'
+			backupp=backupPath+"\\"+f.split('\\')[-1]
+			out.outC(f'{spaces}> [{progress(i+1, len(fileList))}] {f} ','white','black',1)
+		fileSize=os.path.getsize(f)
+		sizef=formatFileSize(fileSize)
+		out.outC(f'{sizef} ','yellow','black',1)
+		
+		t = threading.Thread(target=copyProcess, args=(f, backupp))
+		t.start()
+		shutil.copy2(f,backupp)
+		
+		backupFileSize=os.path.getsize(backupp)
+		sizefb=formatFileSize(backupFileSize)
+		endTime=time.time()
+		usedTime=formatSeconds(endTime - beginTime)
+		
+		if fileSize==backupFileSize:
+			out.outC(f'[成功，用时{usedTime}]{end}','green','black',1)
+			outLog(f'[{progress(i+1, len(fileList))}] {f} {sizef} SUCCESS UsedTime: {usedTime}','COPY_FILE')
+			return True
+		else:
+			out.outC(f'[大小不一致，用时{usedTime}]{end}','yellow','black',1)
+			outLog(f'[{progress(i+1, len(fileList))}] {f} {sizef} {sizefb} SIZE_WRONG UsedTime: {usedTime}','COPY_FILE')
+			return formatFileSize
+	except Exception as e:
+		out.outC(f' [失败]{end}','red','black',1)
+		outLog(f'[{progress(i+1, len(fileList))}] {f} Error: {e}','COPY_FILE')
+		logger.exception('Exception')
+		return False
+
+copyCount=0
+def copyFolder(source_folder, destination_folder, fileList):
+	global copyCount
+	# 创建目标文件夹
+	os.makedirs(destination_folder, exist_ok=True)
+	# 遍历源文件夹中的所有文件和文件夹
+	for item in os.listdir(source_folder):
+		source_item = os.path.join(source_folder, item)
+		destination_item = os.path.join(destination_folder, item)
+		# 判断是否为文件夹
+		if os.path.isdir(source_item):
+			# 递归复制子文件夹
+			copyFolder(source_item, destination_item, fileList)
+		else:
+			# 复制文件
+			copyWithInfo(source_item, destination_item, copyCount, fileList, True)
+			copyCount+=1
+
+def copyTreeWithInfo(p, backupPath, i, fileList):
+	try:
+		beginTime=time.time()
+		global copyCount
+		isCopyTreeSuccess=True
+		pName=p.split('\\')[-1]
+		out.outC(f'   > [{progress(i+1, len(fileList))}] {p} ','white','black',1)
+		allFileList=getAllFileList(p)
+		out.outC(f'{len(allFileList)}个文件 ','white','black',1)
+		fileSize=getAllFileSize(allFileList)
+		sizef=formatFileSize(fileSize)
+		out.outlnC(f'{sizef} ','yellow','black',1)
+		backupp=backupPath+"\\"+pName
+		copyCount=0
+		copyFolder(p,backupp,allFileList)
+		backupFileSize=getAllFileSize(getAllFileList(backupp))
+		sizefb=formatFileSize(backupFileSize)
+		endTime=time.time()
+		usedTime=formatSeconds(endTime - beginTime)
+		# print('\r', end='', flush=True)
+		out.outln()
+		if fileSize==backupFileSize:
+			out.outlnC(f'   [成功，用时{usedTime}]','green','black',1)
+			outLog(f'[{progress(i+1, len(fileList))}] {p} {sizef} SUCCESS UsedTime: {usedTime}','COPY_FOLDER')
+			return isCopyTreeSuccess
+		else:
+			out.outlnC(f'   [大小不一致，用时{usedTime}]','yellow','black',1)
+			outLog(f'[{progress(i+1, len(fileList))}] {p} {sizef} {sizefb} SIZE_WRONG UsedTime: {usedTime}','COPY_FOLDER')
+			return False
+	except Exception as e:
+		out.outlnC(' [失败]','red','black',1)
+		outLog(f'[{progress(i+1, len(fileList))}] {p} Error: {e}','COPY_FILE')
+		logger.exception('Exception')
+		isBackupSuccess=False
+
 def printTitle():
 	version=f'v{VERSION["versionUpdate"][0]["mainVersion"]} Build {VERSION["versionUpdate"][0]["dateVersion"]}'
 	os.system('cls')
@@ -348,25 +495,9 @@ def initBackup():
 			try:
 				if os.path.isdir(p):
 					# 备份路径为文件夹
-					beginTime=time.time()
-					out.outC(f'   > [{progress(index+1, len(bk["path"]))}] {p} ','white','black',1)
-					allFileList=getAllFileList(p)
-					out.outC(f'{len(allFileList)}个文件 ','white','black',1)
-					fileSize=getAllFileSize(allFileList)
-					sizef=formatFileSize(fileSize)
-					out.outC(f'{sizef} ','yellow','black',1)
-					backupp=backupPath+"\\"+pName
-					shutil.copytree(p,backupp)
-					backupFileSize=getAllFileSize(getAllFileList(backupp))
-					sizefb=formatFileSize(backupFileSize)
-					endTime=time.time()
-					usedTime=formatSeconds(endTime - beginTime)
-					if fileSize==backupFileSize:
-						out.outlnC(f'[成功，用时{usedTime}]','green','black',1)
-						outLog(f'[{progress(index+1, len(bk["path"]))}] {p} {sizef} SUCCESS UsedTime: {usedTime}','COPY_FOLDER')
-					else:
-						out.outlnC(f'[大小不一致，用时{usedTime}]','yellow','black',1)
-						outLog(f'[{progress(index+1, len(bk["path"]))}] {p} {sizef} {sizefb} SIZE_WRONG UsedTime: {usedTime}','COPY_FOLDER')
+					copyRs=copyTreeWithInfo(p,backupPath,index,bk['path'])
+					if not copyRs:
+						isBackupSuccess=False
 				else:
 					# 备份路径为文件
 					if '*' in p:
@@ -376,48 +507,13 @@ def initBackup():
 						psp.pop()
 						fileList=[fl for fl in getFileList('\\'.join(psp)) if len(pnamesp)==1 or f'.{pnamesp[1]}' in fl]
 						for i,f in enumerate(fileList):
-							try:
-								beginTime=time.time()
-								out.outC(f'   > [{progress(i+1, len(fileList))}] {f} ','white','black',1)
-								fileSize=os.path.getsize(f)
-								sizef=formatFileSize(fileSize)
-								out.outC(f'{sizef} ','yellow','black',1)
-								backupp=backupPath+"\\"+f.split('\\')[-1]
-								shutil.copy2(f,backupPath)
-								backupFileSize=os.path.getsize(backupp)
-								sizefb=formatFileSize(backupFileSize)
-								endTime=time.time()
-								usedTime=formatSeconds(endTime - beginTime)
-								if fileSize==backupFileSize:
-									out.outlnC(f'[成功，用时{usedTime}]','green','black',1)
-									outLog(f'[{progress(i+1, len(fileList))}] {f} {sizef} SUCCESS UsedTime: {usedTime}','COPY_FILE')
-								else:
-									out.outlnC(f'[大小不一致，用时{usedTime}]','yellow','black',1)
-									outLog(f'[{progress(i+1, len(fileList))}] {f} {sizef} {sizefb} SIZE_WRONG UsedTime: {usedTime}','COPY_FILE')
-							except Exception as e:
-								out.outlnC(' [失败]','red','black',1)
-								outLog(f'[{progress(i+1, len(fileList))}] {f} Error: {e}','COPY_FILE')
-								logger.exception('Exception')
+							copyRs=copyWithInfo(f, backupPath, i, fileList)
+							if not copyRs:
 								isBackupSuccess=False
 					else:
-						beginTime=time.time()
-						out.outC(f'   > [{progress(index+1, len(bk["path"]))}] {p} ','white','black',1)
-						fileSize=os.path.getsize(p)
-						sizef=formatFileSize(fileSize)
-						out.outC(f'{sizef} ','yellow','black',1)
-						backupp=backupPath+"\\"+p.split('\\')[-1]
-						# shutil.copy2(p,backupPath+"\\"+pName)
-						shutil.copy2(p,backupp)
-						backupFileSize=os.path.getsize(backupp)
-						sizefb=formatFileSize(backupFileSize)
-						endTime=time.time()
-						usedTime=formatSeconds(endTime - beginTime)
-						if fileSize==backupFileSize:
-							out.outlnC(f'[成功，用时{usedTime}]','green','black',1)
-							outLog(f'[{progress(index+1, len(bk["path"]))}] {p} {sizef} SUCCESS UsedTime: {usedTime}','COPY_FILE')
-						else:
-							out.outlnC(f'[大小不一致，用时{usedTime}]','yellow','black',1)
-							outLog(f'[{progress(index+1, len(bk["path"]))}] {p} {sizef} {sizefb} SIZE_WRONG UsedTime: {usedTime}','COPY_FILE')
+						copyRs=copyWithInfo(p, backupPath, i, fileList)
+						if not copyRs:
+							isBackupSuccess=False
 			except Exception as e:
 				out.outlnC(' [失败]','red','black',1)
 				outLog(f'[{progress(index+1, len(bk["path"]))}] {p} Error: {e}','COPY_FILE')
