@@ -12,13 +12,22 @@ import colorout as out
 
 '''
 TODO
-将文件夹刷屏改为显示全体进度和单文件百分比
+~将文件夹刷屏改为显示全体进度和单文件百分比~
 '''
 
 VERSION={
 "appName":"BackupData",
 "appNameCN":"数据备份工具",
 "versionUpdate":[
+{
+	"mainVersion":"1.0.8",
+	"dateVersion":"20240805",
+	"versionDesc":[
+		"优化日志输出逻辑，减轻写入量。",
+		"修复复制文件报错的bug。",
+		"修复复制文件计数错误的bug。",
+	""]
+},
 {
 	"mainVersion":"1.0.7",
 	"dateVersion":"20240804",
@@ -183,7 +192,6 @@ def getFileList(addr):
 				fileList.append(curPath)
 	return fileList
 
-
 def getAllFileList(addr,includeFolders=False):
 	allFileList={'files':[],'folders':[]}
 	if not exist(addr): #路径不存在的情况
@@ -257,16 +265,23 @@ def loadConfig(file):
 	except Exception as e:
 		return False
 
+logArr=[]
 def outLog(log='',tp='log'):
-	logPath=f'{backupRoot}\\{backupLog}'
+	global logArr
 	if log=='':
 		logStr='\n'
 	else:
 		curTime=time.strftime('%Y-%m-%d %H:%M:%S')
 		logStr=f'[{curTime}] {tp.upper()}: {log}\n'
+	logArr.append(logStr)
+
+def writeLog():
+	global logArr
+	logPath=f'{backupRoot}\\{backupLog}'
 	f=open(logPath,'a',encoding='utf-8')
-	f.write(logStr)
+	f.write(''.join(logArr))
 	f.close()
+	logArr=[]
 
 def progress(cur, total, type='progress'):
 	curStr=f'{cur}'
@@ -282,7 +297,6 @@ def progress(cur, total, type='progress'):
 		return f'{curStr.rjust(len(totalStr))}'
 	else:
 		return curStr
-
 
 def copyProcess(src, dst):
 	srcSize=0
@@ -319,16 +333,16 @@ def copyProcess(src, dst):
 		except Exception as e:
 			return
 
-
 def copyWithInfo(f, backupPath, i, fileList, isFolder=False):
 	try:
 		beginTime=time.time()
 		if isFolder:
 			spaces='     '
 			#end='     > [    236/1126185] 111205.3 MB [成功，用时{usedTime}]{end}'
-			end =f'{" "*70}\r'
+			# end =f'{" "*70}\r'
+			end ='\r'
 			backupp=backupPath
-			print(end, end='', flush=True)
+			print(' '*70, end='\r', flush=True)
 			# fileName=f.split('\\')[-1]
 			out.outC(f'{spaces}> [{progress(i+1, len(fileList))}] ','white','black',1)
 		else:
@@ -511,7 +525,7 @@ def initBackup():
 							if not copyRs:
 								isBackupSuccess=False
 					else:
-						copyRs=copyWithInfo(p, backupPath, i, fileList)
+						copyRs=copyWithInfo(p, backupPath, index, bk["path"])
 						if not copyRs:
 							isBackupSuccess=False
 			except Exception as e:
@@ -534,8 +548,8 @@ def initBackup():
 	else:
 		out.outlnC(f'部分数据备份失败！用时{allUsedTime}，按任意键退出。','red','black',1)
 		outLog(f'Some data backup failed. UsedTime: {allUsedTime}','BACKUP_RESULT')
+	writeLog()
 	pause()
-
 
 def main(args):
 	os.system('cls')
