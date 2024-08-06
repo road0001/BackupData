@@ -20,6 +20,13 @@ VERSION={
 "appNameCN":"数据备份工具",
 "versionUpdate":[
 {
+	"mainVersion":"1.0.8.1",
+	"dateVersion":"20240806",
+	"versionDesc":[
+		"修复部分错误返回结果不正确的bug。",
+	""]
+},
+{
 	"mainVersion":"1.0.8",
 	"dateVersion":"20240805",
 	"versionDesc":[
@@ -370,7 +377,7 @@ def copyWithInfo(f, backupPath, i, fileList, isFolder=False):
 		else:
 			out.outC(f'[大小不一致，用时{usedTime}]{end}','yellow','black',1)
 			outLog(f'[{progress(i+1, len(fileList))}] {f} {sizef} {sizefb} SIZE_WRONG UsedTime: {usedTime}','COPY_FILE')
-			return formatFileSize
+			return False
 	except Exception as e:
 		out.outC(f' [失败]{end}','red','black',1)
 		outLog(f'[{progress(i+1, len(fileList))}] {f} Error: {e}','COPY_FILE')
@@ -428,7 +435,7 @@ def copyTreeWithInfo(p, backupPath, i, fileList):
 		out.outlnC(' [失败]','red','black',1)
 		outLog(f'[{progress(i+1, len(fileList))}] {p} Error: {e}','COPY_FILE')
 		logger.exception('Exception')
-		isBackupSuccess=False
+		return False
 
 def printTitle():
 	version=f'v{VERSION["versionUpdate"][0]["mainVersion"]} Build {VERSION["versionUpdate"][0]["dateVersion"]}'
