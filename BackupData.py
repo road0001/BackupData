@@ -20,6 +20,14 @@ VERSION={
 "appNameCN":"数据备份工具",
 "versionUpdate":[
 {
+	"mainVersion":"1.0.9",
+	"dateVersion":"20240817",
+	"versionDesc":[
+		"加入排除项跳过功能。",
+		"调整日志文件名，加入日期时间。",
+	""]
+},
+{
 	"mainVersion":"1.0.8.1",
 	"dateVersion":"20240806",
 	"versionDesc":[
@@ -118,7 +126,7 @@ VERSION={
 Configs
 '''
 defaultConfig='config.json'
-backupLog='backup.log'
+backupLog='backup'
 '''
 Utils
 '''
@@ -262,6 +270,15 @@ def makeOutputDir(addr):
 		os.makedirs(dirs)
 	return dirs
 
+def isExclude(f):
+	excludeList=configData['exclude']
+	for exclude in excludeList:
+		if exclude[0]=='*':
+			exclude=exclude.replace('*','')
+		if exclude in f:
+			return True
+	return False
+
 configData={}
 def loadConfig(file):
 	global configData
@@ -284,7 +301,7 @@ def outLog(log='',tp='log'):
 
 def writeLog():
 	global logArr
-	logPath=f'{backupRoot}\\{backupLog}'
+	logPath=f'{backupRoot}\\{backupLog}_{backupTime}.log'
 	f=open(logPath,'a',encoding='utf-8')
 	f.write(''.join(logArr))
 	f.close()
@@ -357,6 +374,12 @@ def copyWithInfo(f, backupPath, i, fileList, isFolder=False):
 			end='\n'
 			backupp=backupPath+"\\"+f.split('\\')[-1]
 			out.outC(f'{spaces}> [{progress(i+1, len(fileList))}] {f} ','white','black',1)
+		
+		if isExclude(f):
+			out.outC(f'[跳过]{end}','yellow','black',1)
+			outLog(f'[{progress(i+1, len(fileList))}] {f} JUMP','COPY_FILE')
+			return True
+		
 		fileSize=os.path.getsize(f)
 		sizef=formatFileSize(fileSize)
 		out.outC(f'{sizef} ','yellow','black',1)
@@ -409,6 +432,12 @@ def copyTreeWithInfo(p, backupPath, i, fileList):
 		isCopyTreeSuccess=True
 		pName=p.split('\\')[-1]
 		out.outC(f'   > [{progress(i+1, len(fileList))}] {p} ','white','black',1)
+
+		if isExclude(p):
+			out.outlnC(f'[跳过]','yellow','black',1)
+			outLog(f'[{progress(i+1, len(fileList))}] {p} JUMP','COPY_FOLDER')
+			return isCopyTreeSuccess
+
 		allFileList=getAllFileList(p)
 		out.outC(f'{len(allFileList)}个文件 ','white','black',1)
 		fileSize=getAllFileSize(allFileList)
@@ -459,9 +488,11 @@ def checkProcessList(bkList, index=-1):
 				checkedList.append(ps)
 	return checkedList
 
+backupTime=''
 backupRoot=''
 def initBackup():
 	global backupRoot
+	global backupTime
 	out.outlnC('即将进行备份的内容：','cyan','black',1)
 	bkList=configData['backupList']
 	for i,bk in enumerate(bkList):

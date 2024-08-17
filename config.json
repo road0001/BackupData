@@ -41,5 +41,10 @@
 			"process":[],
 			"enabled":true
 		}
+	],
+	"exclude":[
+		"*.cfg",
+		"ExpressionRecommend",
+		"RSFileClt.db"
 	]
 }
