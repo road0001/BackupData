@@ -20,6 +20,14 @@ VERSION={
 "appNameCN":"数据备份工具",
 "versionUpdate":[
 {
+	"mainVersion":"1.0.10",
+	"dateVersion":"20250302",
+	"versionDesc":[
+		"加入列表中!开头的路径跳过功能。",
+		"加入可选的扩展备份功能。",
+	""]
+},
+{
 	"mainVersion":"1.0.9",
 	"dateVersion":"20240817",
 	"versionDesc":[
@@ -271,13 +279,16 @@ def makeOutputDir(addr):
 	return dirs
 
 def isExclude(f):
-	excludeList=configData['exclude']
-	for exclude in excludeList:
-		if exclude[0]=='*':
-			exclude=exclude.replace('*','')
-		if exclude in f:
-			return True
-	return False
+	if 'exclude' in configData:
+		excludeList=configData['exclude']
+		for exclude in excludeList:
+			if exclude[0]=='*':
+				exclude=exclude.replace('*','')
+			if exclude in f:
+				return True
+		return False
+	else:
+		return False
 
 configData={}
 def loadConfig(file):
@@ -490,11 +501,11 @@ def checkProcessList(bkList, index=-1):
 
 backupTime=''
 backupRoot=''
-def initBackup():
+def initBackup(backupName):
 	global backupRoot
 	global backupTime
 	out.outlnC('即将进行备份的内容：','cyan','black',1)
-	bkList=configData['backupList']
+	bkList=configData[backupName]
 	for i,bk in enumerate(bkList):
 		if not bk['enabled']:
 			continue
@@ -518,7 +529,8 @@ def initBackup():
 			break
 	
 	while True:
-		backupTime=time.strftime('%Y%m%d_%H%M%S')
+		if not backupTime:
+			backupTime=time.strftime('%Y%m%d_%H%M%S')
 		backupRoot=makeOutputDir(f'{configData["backupPath"]}\\{backupTime}')
 		if exist(backupRoot):
 			out.outlnC(f'\n备份路径：{backupRoot}','purple','black',1)
@@ -543,6 +555,8 @@ def initBackup():
 		outLog(f'Begin backup: [{progress(bi+1, len(bkList))}] {bk["name"]}','BEGIN_BACKUP')
 		backupPath=makeOutputDir(f'{backupRoot}\\{bk["name"]}')
 		for index, p in enumerate(bk['path']):
+			if p[0]=='!':
+				continue # 开头为!表示跳过
 			pName=p.split('\\')[-1]
 			try:
 				if os.path.isdir(p):
@@ -581,13 +595,12 @@ def initBackup():
 	allEndTime=time.time()
 	allUsedTime=formatSeconds(allEndTime - allBeginTime)
 	if isBackupSuccess:
-		out.outlnC(f'所有数据备份成功！用时{allUsedTime}，按任意键退出。','green','black',1)
+		out.outlnC(f'所有数据备份成功！用时{allUsedTime}。','green','black',1)
 		outLog(f'All data backup success. UsedTime: {allUsedTime}','BACKUP_RESULT')
 	else:
-		out.outlnC(f'部分数据备份失败！用时{allUsedTime}，按任意键退出。','red','black',1)
+		out.outlnC(f'部分数据备份失败！用时{allUsedTime}。','red','black',1)
 		outLog(f'Some data backup failed. UsedTime: {allUsedTime}','BACKUP_RESULT')
 	writeLog()
-	pause()
 
 def main(args):
 	os.system('cls')
@@ -604,7 +617,14 @@ def main(args):
 			main([args[0]]) # 传参配置文件读取失败时，尝试读取默认配置文件
 		if cfgLoadSuccess:
 			printTitle()
-			initBackup()
+			if 'backupList' in configData:
+				initBackup('backupList')
+			if 'extendBackupList' in configData:
+				out.outlnC('按任意键开始扩展备份，如果不需要，请关闭窗口！','cyan','black',1)
+				pause()
+				initBackup('extendBackupList')
+			out.outlnC('按任意键退出。','green','black',1)
+			pause()
 		else:
 			out.outlnC('配置文件读取失败！按任意键重试！','red','black',1)
 			pause()
