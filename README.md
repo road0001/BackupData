@@ -36,6 +36,28 @@
             "process":[],
             "enabled":true
         }
+    ],
+    "extendBackupList":[
+        {
+			"name":"扩展备份1",
+			"path":[
+				"C:\\路径1"
+			],
+			"process":["进程1.exe"],
+			"enabled":false
+		},
+        {
+			"name":"扩展备份2",
+			"path":[
+				"C:\\路径2"
+			],
+			"process":[],
+			"enabled":true
+		}
+    ],
+    "exclude":[
+        "C:\\排除文件夹1",
+        "C:\\排除文件1.exe"
     ]
 }
 ```
