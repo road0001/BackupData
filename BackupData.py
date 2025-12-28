@@ -20,6 +20,14 @@ VERSION={
 "appNameCN":"数据备份工具",
 "versionUpdate":[
 {
+	"mainVersion":"1.0.11",
+	"dateVersion":"20251225",
+	"versionDesc":[
+		"加入多备份列表选择功能。",
+		"加入文件夹备份时显示百分比功能。",
+	""]
+},
+{
 	"mainVersion":"1.0.10",
 	"dateVersion":"20250302",
 	"versionDesc":[
@@ -323,6 +331,10 @@ def progress(cur, total, type='progress'):
 	totalStr=f'{total}'
 	if type=='progress':
 		return f'{curStr.rjust(len(totalStr))}/{total}'
+	if type=="progress_percent":
+		perStr=f'{int(cur/total*100)}%'
+		ptotalStr='100%'
+		return f'{curStr.rjust(len(totalStr))}/{total} {perStr.rjust(len(ptotalStr))}'
 	elif type=='percent':
 		curStr+='%'
 		totalStr+='%'
@@ -379,12 +391,12 @@ def copyWithInfo(f, backupPath, i, fileList, isFolder=False):
 			backupp=backupPath
 			print(' '*70, end='\r', flush=True)
 			# fileName=f.split('\\')[-1]
-			out.outC(f'{spaces}> [{progress(i+1, len(fileList))}] ','white','black',1)
+			out.outC(f'{spaces}> [{progress(i+1, len(fileList), "progress_percent")}] ','white','black',1)
 		else:
 			spaces='   '
 			end='\n'
 			backupp=backupPath+"\\"+f.split('\\')[-1]
-			out.outC(f'{spaces}> [{progress(i+1, len(fileList))}] {f} ','white','black',1)
+			out.outC(f'{spaces}> [{progress(i+1, len(fileList), "progress_percent")}] {f} ','white','black',1)
 		
 		if isExclude(f):
 			out.outC(f'[跳过]{end}','yellow','black',1)
@@ -442,7 +454,7 @@ def copyTreeWithInfo(p, backupPath, i, fileList):
 		global copyCount
 		isCopyTreeSuccess=True
 		pName=p.split('\\')[-1]
-		out.outC(f'   > [{progress(i+1, len(fileList))}] {p} ','white','black',1)
+		out.outC(f'   > [{progress(i+1, len(fileList), "progress_percent")}] {p} ','white','black',1)
 
 		if isExclude(p):
 			out.outlnC(f'[跳过]','yellow','black',1)
@@ -504,7 +516,7 @@ backupRoot=''
 def initBackup(backupName):
 	global backupRoot
 	global backupTime
-	out.outlnC('即将进行备份的内容：','cyan','black',1)
+	out.outlnC(f'[{backupName}] 即将进行备份的内容：','cyan','black',1)
 	bkList=configData[backupName]
 	for i,bk in enumerate(bkList):
 		if not bk['enabled']:
@@ -602,6 +614,41 @@ def initBackup(backupName):
 		outLog(f'Some data backup failed. UsedTime: {allUsedTime}','BACKUP_RESULT')
 	writeLog()
 
+def initBackupList(data):
+	curBkList=[]
+	for d in data:
+		if d!='backupPath' and d!='exclude':
+			out.outlnC(f' {progress(len(curBkList)+1, len(data), "number")}. {d}','yellow','black',1)
+			curBkList.append(d)
+	out.outC('按数字键选择备份列表，按回车键开始执行所有备份列表：','cyan','black',1)
+	selectBkList=input()
+	if selectBkList.isdigit():
+		selectBkList=int(selectBkList)-1
+	else:
+		selectBkList=-1
+
+	blAllBeginTime=time.time()
+	for bi,bk in enumerate(curBkList):
+		if selectBkList>=0 and bi!=selectBkList:
+			continue
+		blListBeginTime=time.time()
+		out.outln()
+		initBackup(curBkList[bi])
+		blListEndTime=time.time()
+		blListUsedTime=formatSeconds(blListEndTime - blListBeginTime)
+		out.outln()
+		out.outlnC(f'[{curBkList[bi]}]列表备份成功！用时{blListUsedTime}。','cyan','black',1)
+	blAllEndTime=time.time()
+	blAllUsedTime=formatSeconds(blAllEndTime - blAllBeginTime)
+	out.outln()
+	out.outlnC(f'所有列表备份成功！用时{blAllUsedTime}。按任意键返回备份列表选择！如果不需要，请关闭窗口！','purple','black',1)
+	pause()
+	out.outln()
+	initBackupList(data)
+
+
+
+
 def main(args):
 	os.system('cls')
 	out.outlnC('正在读取配置数据，请稍候……','cyan','black',1)
@@ -617,6 +664,7 @@ def main(args):
 			main([args[0]]) # 传参配置文件读取失败时，尝试读取默认配置文件
 		if cfgLoadSuccess:
 			printTitle()
+			initBackupList(configData)
 			if 'backupList' in configData:
 				initBackup('backupList')
 			if 'extendBackupList' in configData:
